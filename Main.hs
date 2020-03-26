@@ -62,6 +62,7 @@ preludeDefs =
     , ("compose", ["f", "g", "x"], EAp (EVar "f") (EAp (EVar "g") (EVar "x")))
     , ("twice", ["f"], EAp (EAp (EVar "compose") (EVar "f")) (EVar "f"))
     , ("testId", [], ELam ["x"] (EVar "x"))
+    , ("testPlus", ["x", "y"], EAp (EAp (EVar "+") (EVar "x")) (EVar "y"))
     ]
 
 class (Monoid iseq, IsString iseq) =>
@@ -119,6 +120,9 @@ pprint = pprSupercombs
     pprExpr :: ISeq iseq => CoreExpr -> iseq
     pprExpr (ENum n) = iStr $ show n
     pprExpr (EVar v) = iStr v
+    pprExpr (EAp (EAp (EVar op) e1) e2)
+      | op `elem` ["+", "-", "*", "/", "<", ">", "<=", ">="] =
+        iConcat [pprAExpr e1, " ", iStr op, " ", pprAExpr e2]
     pprExpr (EAp e1 e2) = pprExpr e1 <> " " <> pprAExpr e2
     pprExpr (ELet isrec defs expr) =
       iConcat
@@ -140,6 +144,20 @@ pprint = pprSupercombs
     pprExpr (ELam args body) =
       iConcat ["λ", iInterleave " " (map iStr args), ". ", pprExpr body]
 
+iNum :: ISeq iseq => Integer -> iseq
+iNum = iStr . show
+
+-- left pad number to a specified width
+iFWNum :: ISeq iseq => Integer -> Integer -> iseq
+iFWNum width n = iStr (spaces (fromIntegral width - length digits) ++ digits)
+  where
+    digits = show n
+
+iLayn :: ISeq iseq => [iseq] -> iseq
+iLayn seqs = iConcat (zipWith layItem [1 ..] seqs)
+  where
+    layItem n seq = iConcat [iFWNum 4 n, ") ", iIndent seq, iNewline]
+
 data ISeqRep
   = INil
   | IStr String
@@ -159,6 +177,9 @@ instance Monoid ISeqRep where
 instance IsString ISeqRep where
   fromString = IStr
 
+spaces :: (Integral n, Num n) => n -> String
+spaces n = take (fromIntegral n) $ cycle " "
+
 flatten :: Int -> [(ISeqRep, Int)] -> String
 flatten _ [] = ""
 flatten col ((INil, _):seqs) = flatten col seqs
@@ -167,8 +188,6 @@ flatten col ((IAppend seq1 seq2, indent):seqs) =
   flatten col ((seq1, indent) : (seq2, indent) : seqs)
 flatten col ((INewline, indent):seqs) =
   "\n" ++ spaces indent ++ flatten indent seqs
-  where
-    spaces n = take n $ cycle " "
 flatten col ((IIndent seq, indent):seqs) = flatten col ((seq, col) : seqs)
 
 instance ISeq ISeqRep where
