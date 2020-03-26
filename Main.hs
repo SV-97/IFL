@@ -9,6 +9,10 @@ import           Data.List      (intersperse)
 import           Data.Semigroup (Semigroup (..))
 import           Data.String    (IsString (..))
 
+import           Data.Char      (isAlpha, isAlphaNum, isDigit, isSpace)
+
+import           Prelude        hiding (lex)
+
 type Name = String
 
 data Expr binder
@@ -194,6 +198,42 @@ instance ISeq ISeqRep where
   iIndent = IIndent
   iNewline = INewline
   iDisplay seq = flatten 0 [(seq, 0)]
+
+-- Parser
+data Token =
+  Tok
+    { lineNo :: Integer
+    , text   :: String
+    }
+
+twoCharOps = ["==", "~=", ">=", "<=", "->"]
+
+lex :: Integer -> String -> [Token]
+lex i (c1:c2:cs)
+  | [c1, c2] == "||" =
+    let rest = drop 1 $ dropWhile (/= '\n') cs
+     in lex (i + 1) rest
+  | [c1, c2] `elem` twoCharOps = Tok i [c1, c2] : lex i cs
+lex i (c:cs)
+  | c == '\n' = lex (i + 1) cs
+  | isSpace c = lex i cs
+  | isDigit c =
+    let numTok = Tok i (c : tokTail)
+        (tokTail, rest) = span isDigit cs
+     in numTok : lex i rest
+  | isAlpha c =
+    let varTok = Tok i (c : tokTail)
+        (tokTail, rest) = span isIdChar cs
+        isIdChar c = isAlphaNum c || c == '_'
+     in varTok : lex i rest
+  | otherwise = Tok i [c] : lex i cs
+lex _ [] = []
+
+syntax :: [Token] -> CoreProgram
+syntax = undefined
+
+parse :: String -> CoreProgram
+parse = syntax . lex 1
 
 main :: IO ()
 main = do
