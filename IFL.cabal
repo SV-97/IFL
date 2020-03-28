@@ -18,7 +18,7 @@ extra-source-files:  ChangeLog.md
 
 executable IFL
   main-is:             Main.hs
-  -- other-modules:
+  other-modules: PrettyPrint, Parser, Base, CorePrograms
   -- other-extensions:
   build-depends:       base >=4.10
   -- hs-source-dirs:

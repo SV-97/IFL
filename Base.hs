@@ -10,6 +10,7 @@ data Expr binder
   | ELet IsRec [(binder, Expr binder)] (Expr binder)
   | ECase (Expr binder) [Alter binder]
   | ELam [binder] (Expr binder)
+  deriving (Show)
 
 type CoreExpr = Expr Name
 
@@ -25,6 +26,7 @@ rhssOf defns = [rhs | (name, rhs) <- defns]
 
 newtype Alter a =
   Alter (Integer, [a], Expr a)
+  deriving (Show)
 
 type CoreAlt = Alter Name
 
@@ -39,6 +41,9 @@ type CoreProgram = Program Name
 
 newtype SuperCombDef binder =
   SCDef (Name, [binder], Expr binder)
+  deriving (Show)
+
+type CoreSuperCombDef = SuperCombDef String
 
 preludeDefs :: CoreProgram
 preludeDefs =

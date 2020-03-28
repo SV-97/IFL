@@ -1,8 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Parser
-  (
-  ) where
+module Parser where
 
 import           Base
 
@@ -58,6 +56,42 @@ pThen4 combine p1 p2 p3 p4 toks =
   , (v4, toks4) <- p4 toks3
   ]
 
+pThen5 ::
+     (a -> b -> c -> d -> e -> f)
+  -> Parser a
+  -> Parser b
+  -> Parser c
+  -> Parser d
+  -> Parser e
+  -> Parser f
+pThen5 combine p1 p2 p3 p4 p5 toks =
+  [ (combine v1 v2 v3 v4 v5, toks5)
+  | (v1, toks1) <- p1 toks
+  , (v2, toks2) <- p2 toks1
+  , (v3, toks3) <- p3 toks2
+  , (v4, toks4) <- p4 toks3
+  , (v5, toks5) <- p5 toks4
+  ]
+
+pThen6 ::
+     (a -> b -> c -> d -> e -> f -> g)
+  -> Parser a
+  -> Parser b
+  -> Parser c
+  -> Parser d
+  -> Parser e
+  -> Parser f
+  -> Parser g
+pThen6 combine p1 p2 p3 p4 p5 p6 toks =
+  [ (combine v1 v2 v3 v4 v5 v6, toks6)
+  | (v1, toks1) <- p1 toks
+  , (v2, toks2) <- p2 toks1
+  , (v3, toks3) <- p3 toks2
+  , (v4, toks4) <- p4 toks3
+  , (v5, toks5) <- p5 toks4
+  , (v6, toks6) <- p6 toks5
+  ]
+
 pZeroOrMore :: Parser a -> Parser [a]
 pZeroOrMore p toks = take 1 (pars toks)
   where
@@ -73,7 +107,7 @@ pApply :: Parser a -> (a -> b) -> Parser b
 pApply p f toks = [(f a, toks1) | (a, toks1) <- p toks]
 
 pOneOrMoreWithSep :: Parser a -> Parser b -> Parser [a]
-pOneOrMoreWithSep p1 p2 = pOneOrMore (pThen const p1 p2)
+pOneOrMoreWithSep p1 p2 = pThen (:) p1 (pZeroOrMore (pThen (flip const) p2 p1))
 
 pSat :: (String -> Bool) -> Parser String
 pSat pred (Tok i text:toks)
@@ -143,7 +177,92 @@ lex i (c:cs)
 lex _ [] = []
 
 syntax :: [Token] -> CoreProgram
-syntax = undefined
+syntax = takeFirstParse . pProgram
+  where
+    takeFirstParse ((prog, []):_) = prog
+    takeFirstParse _              = error "Syntax error"
 
 parse :: String -> CoreProgram
 parse = syntax . lex 1
+
+pProgram :: Parser CoreProgram
+pProgram = pOneOrMoreWithSep pSuperComb (pLit ";")
+
+pSuperComb :: Parser CoreSuperCombDef
+pSuperComb = pThen4 mkSuperComb pVar (pZeroOrMore pVar) (pLit "=") pExpr
+  where
+    mkSuperComb name vars equals body = SCDef (name, vars, body)
+
+pExpr :: Parser CoreExpr
+pExpr = pLet `pAlt` pLetRec `pAlt` pCase `pAlt` pLam `pAlt` pAExpr `pAlt` pAp -- `pAlt` pBinOp
+  where
+    pLet =
+      pThen4
+        (\_let defs _in expr -> ELet nonRecursive defs expr)
+        (pLit "let")
+        pDefs
+        (pLit "in")
+        pExpr
+    pLetRec =
+      pThen4
+        (\_let defs _in expr -> ELet recursive defs expr)
+        (pLit "letrec")
+        pDefs
+        (pLit "in")
+        pExpr
+    pCase =
+      pThen4
+        (\_case expr _of alts -> ECase expr alts)
+        (pLit "case")
+        pExpr
+        (pLit "of")
+        pAlts
+    pLam =
+      pThen4
+        (\backslash args dot body -> ELam args body)
+        (pLit "\\")
+        (pZeroOrMore pVar)
+        (pLit ".")
+        pExpr
+    --pBinOp = undefined
+    pAp = (pOneOrMore pAExpr `pApply` reverse) `pApply` mkApChain
+      where
+        mkApChain :: [CoreExpr] -> CoreExpr
+        mkApChain (e:es@(_:_)) = EAp (mkApChain es) e
+        mkApChain [e]          = e
+
+pDefs :: Parser [(String, CoreExpr)]
+pDefs = pOneOrMoreWithSep pDef (pLit ";")
+
+pDef :: Parser (String, CoreExpr)
+pDef = pThen3 (\var equals expr -> (var, expr)) pVar (pLit "=") pExpr
+
+pAlts :: Parser [CoreAlt]
+pAlts = pOneOrMoreWithSep pAlt (pLit ";")
+  where
+    pAlt =
+      pThen6
+        (\c1 n1 c2 vars arrow expr -> Alter (n1, vars, expr))
+        (pLit "<")
+        pNum
+        (pLit ">")
+        (pZeroOrMore pVar)
+        (pLit "->")
+        pExpr
+
+-- Parser for Atomic Expressions
+pAExpr :: Parser CoreExpr
+pAExpr =
+  (pVar `pApply` EVar) `pAlt` (pNum `pApply` ENum) `pAlt` pConstructor `pAlt`
+  pParenExpr
+  where
+    pConstructor =
+      pThen6
+        (\pack b1 n1 comma n2 b2 -> EConstr n1 n2)
+        (pLit "Pack")
+        (pLit "{")
+        pNum
+        (pLit ",")
+        pNum
+        (pLit "}")
+    pParenExpr = pThen3 (\b1 expr b2 -> expr) (pLit "(") pExpr (pLit ")")
