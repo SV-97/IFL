@@ -93,12 +93,12 @@ pThen6 combine p1 p2 p3 p4 p5 p6 toks =
   ]
 
 pZeroOrMore :: Parser a -> Parser [a]
-pZeroOrMore p toks = take 1 (pars toks)
+pZeroOrMore p toks = pars toks
   where
     pars = pOneOrMore p `pAlt` pEmpty []
 
 pOneOrMore :: Parser a -> Parser [a]
-pOneOrMore p toks = take 1 $ pThen (:) p (pZeroOrMore p) toks
+pOneOrMore p = pThen (:) p (pZeroOrMore p)
 
 pEmpty :: a -> Parser a
 pEmpty a toks = [(a, toks)]
@@ -180,6 +180,7 @@ syntax :: [Token] -> CoreProgram
 syntax = takeFirstParse . pProgram
   where
     takeFirstParse ((prog, []):_) = prog
+    takeFirstParse (_:rest)       = takeFirstParse rest
     takeFirstParse _              = error "Syntax error"
 
 parse :: String -> CoreProgram
@@ -194,7 +195,7 @@ pSuperComb = pThen4 mkSuperComb pVar (pZeroOrMore pVar) (pLit "=") pExpr
     mkSuperComb name vars equals body = SCDef (name, vars, body)
 
 pExpr :: Parser CoreExpr
-pExpr = pLet `pAlt` pLetRec `pAlt` pCase `pAlt` pLam `pAlt` pAExpr `pAlt` pAp -- `pAlt` pBinOp
+pExpr = pLet `pAlt` pLetRec `pAlt` pCase `pAlt` pLam `pAlt` pAExpr `pAlt` pExpr1
   where
     pLet =
       pThen4
@@ -224,12 +225,6 @@ pExpr = pLet `pAlt` pLetRec `pAlt` pCase `pAlt` pLam `pAlt` pAExpr `pAlt` pAp --
         (pZeroOrMore pVar)
         (pLit ".")
         pExpr
-    --pBinOp = undefined
-    pAp = (pOneOrMore pAExpr `pApply` reverse) `pApply` mkApChain
-      where
-        mkApChain :: [CoreExpr] -> CoreExpr
-        mkApChain (e:es@(_:_)) = EAp (mkApChain es) e
-        mkApChain [e]          = e
 
 pDefs :: Parser [(String, CoreExpr)]
 pDefs = pOneOrMoreWithSep pDef (pLit ";")
@@ -266,3 +261,42 @@ pAExpr =
         pNum
         (pLit "}")
     pParenExpr = pThen3 (\b1 expr b2 -> expr) (pLit "(") pExpr (pLit ")")
+
+--BinOp Parsing
+data PartialExpr
+  = NoOp
+  | FounOp String CoreExpr
+
+assembleOp e1 NoOp           = e1
+assembleOp e1 (FounOp op e2) = EAp (EAp (EVar op) e1) e2
+
+pRelOp = foldl1 pAlt $ map pLit ["<", "<=", "==", "~=", ">=", ">"]
+
+pExpr1 :: Parser CoreExpr
+pExpr1 = pThen assembleOp pExpr2 pExpr1c
+
+pExpr1c :: Parser PartialExpr
+pExpr1c = pThen FounOp (pLit "|") pExpr1 `pAlt` pEmpty NoOp
+
+pExpr2 = pThen assembleOp pExpr3 pExpr2c
+
+pExpr2c = pThen FounOp (pLit "&") pExpr2 `pAlt` pEmpty NoOp
+
+pExpr3 = pThen assembleOp pExpr4 pExpr3c
+
+pExpr3c = pThen FounOp pRelOp pExpr3 `pAlt` pEmpty NoOp
+
+pExpr4 = pThen assembleOp pExpr5 pExpr4c
+
+pExpr4c = pThen FounOp (pLit "+" `pAlt` pLit "-") pExpr4 `pAlt` pEmpty NoOp
+
+pExpr5 = pThen assembleOp pExpr6 pExpr5c
+
+pExpr5c = pThen FounOp (pLit "*" `pAlt` pLit "/") pExpr5 `pAlt` pEmpty NoOp
+
+pExpr6 = pAp
+  where
+    pAp = (pOneOrMore pAExpr `pApply` reverse) `pApply` mkApChain
+    mkApChain :: [CoreExpr] -> CoreExpr
+    mkApChain (e:es@(_:_)) = EAp (mkApChain es) e
+    mkApChain [e]          = e

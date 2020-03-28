@@ -13,3 +13,6 @@ main = do
   putStrLn . iDisplay $ (pprint preludeDefs :: ISeqRep)
   putStrLn "\n"
   pprintIO $ parse exercise1_21
+  putStrLn "\nBuiltins from file\n"
+  builtinsSource <- readFile "Example Core Programs/builtins.core"
+  pprintIO $ parse builtinsSource
