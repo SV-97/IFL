@@ -2,7 +2,7 @@ module Main where
 
 import           Base
 import           CorePrograms
-import           Parser
+import           ModernParser (parse)
 import           PrettyPrint
 
 pprintIO x = putStrLn . iDisplay $ (pprint x :: ISeqRep)

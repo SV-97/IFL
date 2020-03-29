@@ -265,10 +265,10 @@ pAExpr =
 --BinOp Parsing
 data PartialExpr
   = NoOp
-  | FounOp String CoreExpr
+  | FoundOp String CoreExpr
 
 assembleOp e1 NoOp           = e1
-assembleOp e1 (FounOp op e2) = EAp (EAp (EVar op) e1) e2
+assembleOp e1 (FoundOp op e2) = EAp (EAp (EVar op) e1) e2
 
 pRelOp = foldl1 pAlt $ map pLit ["<", "<=", "==", "~=", ">=", ">"]
 
@@ -276,23 +276,23 @@ pExpr1 :: Parser CoreExpr
 pExpr1 = pThen assembleOp pExpr2 pExpr1c
 
 pExpr1c :: Parser PartialExpr
-pExpr1c = pThen FounOp (pLit "|") pExpr1 `pAlt` pEmpty NoOp
+pExpr1c = pThen FoundOp (pLit "|") pExpr1 `pAlt` pEmpty NoOp
 
 pExpr2 = pThen assembleOp pExpr3 pExpr2c
 
-pExpr2c = pThen FounOp (pLit "&") pExpr2 `pAlt` pEmpty NoOp
+pExpr2c = pThen FoundOp (pLit "&") pExpr2 `pAlt` pEmpty NoOp
 
 pExpr3 = pThen assembleOp pExpr4 pExpr3c
 
-pExpr3c = pThen FounOp pRelOp pExpr3 `pAlt` pEmpty NoOp
+pExpr3c = pThen FoundOp pRelOp pExpr3 `pAlt` pEmpty NoOp
 
 pExpr4 = pThen assembleOp pExpr5 pExpr4c
 
-pExpr4c = pThen FounOp (pLit "+" `pAlt` pLit "-") pExpr4 `pAlt` pEmpty NoOp
+pExpr4c = pThen FoundOp (pLit "+" `pAlt` pLit "-") pExpr4 `pAlt` pEmpty NoOp
 
 pExpr5 = pThen assembleOp pExpr6 pExpr5c
 
-pExpr5c = pThen FounOp (pLit "*" `pAlt` pLit "/") pExpr5 `pAlt` pEmpty NoOp
+pExpr5c = pThen FoundOp (pLit "*" `pAlt` pLit "/") pExpr5 `pAlt` pEmpty NoOp
 
 pExpr6 = pAp
   where
