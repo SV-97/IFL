@@ -7,7 +7,7 @@ import           Base         (CoreExpr, CoreProgram, CoreSupercombDef,
 import           CorePrograms
 import           ModernParser (parse)
 import           PrettyPrint
-import           Utils        (Addr, Assoc, Heap (..), HeapRep, aLookup)
+import           Utils        (Addr, Assoc, Heap (..), HeapRep, aLookup, mapSnd)
 
 import           Data.List    (mapAccumL)
 
@@ -137,7 +137,32 @@ instantiate (ELet isrec defs body) heap env =
   instantiateLet isrec defs body heap env
 instantiate (ECase e alts) heap env = error "Can't instantiate case exprs"
 
-instantiateLet = undefined
+instantiateLet ::
+     Bool
+  -> [(String, CoreExpr)]
+  -> CoreExpr
+  -> TiHeap
+  -> Assoc String Addr
+  -> (TiHeap, Addr)
+instantiateLet isRec defs body heap env = instantiate body heap'' env''
+  where
+    (env'', heap'') = foldr h (env, heap) defs
+    h =
+      if isRec
+        then f
+        else g
+    f, g, h ::
+         (String, CoreExpr)
+      -> (Assoc String Addr, TiHeap)
+      -> (Assoc String Addr, TiHeap)
+    f (name, rhs) (env', heap') = (env'', heap'')
+      where
+        env'' = (name, addr) : env'
+        (heap'', addr) = instantiate rhs heap env''
+    g (name, rhs) (env', heap') = (env'', heap'')
+      where
+        env'' = (name, addr) : env'
+        (heap'', addr) = instantiate rhs heap env'
 
 instantiateConstr = undefined
 

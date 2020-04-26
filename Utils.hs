@@ -50,3 +50,6 @@ aLookup list key def = fromMaybe def $ lookup key list
 aDomain list = [key | (key, value) <- list]
 
 aRange list = [value | (key, value) <- list]
+
+mapSnd :: (b -> c) -> (a, b) -> (a, c)
+mapSnd f (x1, x2) = (x1, f x2)

@@ -6,6 +6,7 @@ import           ModernParser (parse)
 import           PrettyPrint
 
 import           TemplateInst
+import           TemplateInst (run)
 import           Utils
 
 pprintIO x = putStrLn . iDisplay $ (pprint x :: ISeqRep)
@@ -19,3 +20,12 @@ main = do
   putStrLn "\nBuiltins from file\n"
   builtinsSource <- readFile "Example Core Programs/builtins.core"
   pprintIO $ parse builtinsSource
+  putStrLn "\nfunctional lists Test\n"
+  listsSource <- readFile "Example Core Programs/lists.core"
+  putStrLn $ run listsSource
+  putStrLn "\nletrec functional lists Test\n"
+  letrecListsSource <- readFile "Example Core Programs/letrec_lists.core"
+  putStrLn $ run letrecListsSource
+  putStrLn "\nletrec Test\n"
+  letrecSource <- readFile "Example Core Programs/letrec.core"
+  putStrLn $ run letrecSource
