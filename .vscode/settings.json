@@ -1,0 +1,19 @@
+{
+    "sqltools.connections": [
+        {
+            "database": "/home/sv-97/GitHub/Trading-Bot/raw.db",
+            "dialect": "SQLite",
+            "name": "Trading"
+        },
+        {
+            "database": "db_trading",
+            "dialect": "MySQL",
+            "name": "TradingMySQL",
+            "password": "a%Q7%Na.K,JwrjW",
+            "port": 3306,
+            "server": "192.168.20.210",
+            "username": "SV"
+        }
+    ],
+    "sqltools.useNodeRuntime": true
+}

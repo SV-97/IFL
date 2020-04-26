@@ -4,7 +4,7 @@
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module ModernParser where
+module ModernParser (parse) where
 
 import           Base
 
@@ -146,7 +146,7 @@ program = someWithSep superComb (lit ";")
 
 curry3 f a b c = f (a, b, c)
 
-superComb :: Parser CoreSuperCombDef
+superComb :: Parser CoreSupercombDef
 superComb = curry3 SCDef <$> variable <*> many variable <* lit "=" <*> expr
 
 expr :: Parser CoreExpr
@@ -190,13 +190,13 @@ expr1 :: Parser CoreExpr
 expr1 = assembleOp <$> expr2 <*> expr1c
 
 expr1c :: Parser PartialExpr
-expr1c = FoundOp <$> lit "|" <*> expr1 <|> pure NoOp
+expr1c = FoundOp <$> "|" <*> expr1 <|> pure NoOp
 
 expr2 :: Parser CoreExpr
 expr2 = assembleOp <$> expr3 <*> expr2c
 
 expr2c :: Parser PartialExpr
-expr2c = FoundOp <$> lit "&" <*> expr2 <|> pure NoOp
+expr2c = FoundOp <$> "&" <*> expr2 <|> pure NoOp
 
 expr3 :: Parser CoreExpr
 expr3 = assembleOp <$> expr4 <*> expr3c
@@ -208,13 +208,13 @@ expr4 :: Parser CoreExpr
 expr4 = assembleOp <$> expr5 <*> expr4c
 
 expr4c :: Parser PartialExpr
-expr4c = FoundOp <$> (lit "+" <|> lit "-") <*> expr4 <|> pure NoOp
+expr4c = FoundOp <$> ("+" <|> "-") <*> expr4 <|> pure NoOp
 
 expr5 :: Parser CoreExpr
 expr5 = assembleOp <$> expr6 <*> expr5c
 
 expr5c :: Parser PartialExpr
-expr5c = FoundOp <$> (lit "*" <|> lit "/") <*> expr5 <|> pure NoOp
+expr5c = FoundOp <$> ("*" <|> "/") <*> expr5 <|> pure NoOp
 
 expr6 = some atomicExpr <&> reverse <&> mkApChain
   where

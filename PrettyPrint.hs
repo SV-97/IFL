@@ -35,9 +35,9 @@ pprint = pprSupercombs
     combine f as = iInterleave sep (map f as)
       where
         sep = iConcat [";", iNewline]
-    pprSupercombs :: ISeq iseq => [SuperCombDef Name] -> iseq
+    pprSupercombs :: ISeq iseq => [SupercombDef Name] -> iseq
     pprSupercombs = combine pprSupercomb
-    pprSupercomb :: ISeq iseq => SuperCombDef Name -> iseq
+    pprSupercomb :: ISeq iseq => SupercombDef Name -> iseq
     pprSupercomb (SCDef (name, args, expr)) =
       iConcat
         [ iInterleave " " (iStr name : map iStr args)

@@ -5,6 +5,9 @@ import           CorePrograms
 import           ModernParser (parse)
 import           PrettyPrint
 
+import           TemplateInst
+import           Utils
+
 pprintIO x = putStrLn . iDisplay $ (pprint x :: ISeqRep)
 
 main :: IO ()

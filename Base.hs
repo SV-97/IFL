@@ -35,15 +35,15 @@ isAtomicExpr (EVar v) = True
 isAtomicExpr (ENum n) = True
 isAtomicExpr _        = False
 
-type Program binder = [SuperCombDef binder]
+type Program binder = [SupercombDef binder]
 
 type CoreProgram = Program Name
 
-newtype SuperCombDef binder =
+newtype SupercombDef binder =
   SCDef (Name, [binder], Expr binder)
   deriving (Show)
 
-type CoreSuperCombDef = SuperCombDef String
+type CoreSupercombDef = SupercombDef String
 
 preludeDefs :: CoreProgram
 preludeDefs =

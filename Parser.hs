@@ -93,7 +93,7 @@ pThen6 combine p1 p2 p3 p4 p5 p6 toks =
   ]
 
 pZeroOrMore :: Parser a -> Parser [a]
-pZeroOrMore p toks = pars toks
+pZeroOrMore p = pars
   where
     pars = pOneOrMore p `pAlt` pEmpty []
 
@@ -187,12 +187,12 @@ parse :: String -> CoreProgram
 parse = syntax . lex 1
 
 pProgram :: Parser CoreProgram
-pProgram = pOneOrMoreWithSep pSuperComb (pLit ";")
+pProgram = pOneOrMoreWithSep pSupercomb (pLit ";")
 
-pSuperComb :: Parser CoreSuperCombDef
-pSuperComb = pThen4 mkSuperComb pVar (pZeroOrMore pVar) (pLit "=") pExpr
+pSupercomb :: Parser CoreSupercombDef
+pSupercomb = pThen4 mkSupercomb pVar (pZeroOrMore pVar) (pLit "=") pExpr
   where
-    mkSuperComb name vars equals body = SCDef (name, vars, body)
+    mkSupercomb name vars equals body = SCDef (name, vars, body)
 
 pExpr :: Parser CoreExpr
 pExpr = pLet `pAlt` pLetRec `pAlt` pCase `pAlt` pLam `pAlt` pAExpr `pAlt` pExpr1
@@ -267,7 +267,7 @@ data PartialExpr
   = NoOp
   | FoundOp String CoreExpr
 
-assembleOp e1 NoOp           = e1
+assembleOp e1 NoOp            = e1
 assembleOp e1 (FoundOp op e2) = EAp (EAp (EVar op) e1) e2
 
 pRelOp = foldl1 pAlt $ map pLit ["<", "<=", "==", "~=", ">=", ">"]
