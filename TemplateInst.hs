@@ -6,7 +6,6 @@ import           Base         (CoreExpr, CoreProgram, CoreSupercombDef,
                                Expr (..), SupercombDef (..), preludeDefs)
 import           CorePrograms
 
--- import           Debug.Trace  (trace, traceShowId)
 import           ModernParser (parse)
 import           PrettyPrint
 import           Utils        (Addr, Assoc, Heap (..), HeapRep, aLookup, mapSnd)
@@ -115,9 +114,6 @@ scStep (stack, dump, heap, globals, stats) scName argNames body
     scName ++
     "'. Expected " ++ show argLength ++ ", got " ++ show stackSize ++ "."
   | otherwise = (newStack, dump, newHeap, globals, stats)
-    -- !heapPrint = trace ("\nheap: " ++ show heap ++ "\n\n") heap
-    -- !heapPrint1 = trace ("\nheap': " ++ show heap' ++ "\n\n") heap
-    -- !heapPrint2 = trace ("\nnewHeap: " ++ show newHeap ++ "\n\n") heap
   where
     newHeap = hUpdate heap' rootAddr (NInd resultAddr)
     newStack = resultAddr : stack'
