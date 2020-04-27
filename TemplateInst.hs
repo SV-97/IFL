@@ -5,6 +5,8 @@ module TemplateInst where
 import           Base         (CoreExpr, CoreProgram, CoreSupercombDef,
                                Expr (..), SupercombDef (..), preludeDefs)
 import           CorePrograms
+
+-- import           Debug.Trace  (trace, traceShowId)
 import           ModernParser (parse)
 import           PrettyPrint
 import           Utils        (Addr, Assoc, Heap (..), HeapRep, aLookup, mapSnd)
@@ -32,6 +34,7 @@ type TiStack = [Addr]
 
 data TiDump =
   DummyTiDump
+  deriving (Show)
 
 initialTiDump = DummyTiDump
 
@@ -41,6 +44,8 @@ data Node
   = NAp Addr Addr
   | NSupercomb String [String] CoreExpr
   | NNum Integer
+  | NInd Addr -- Indirection
+  deriving (Show)
 
 type TiGlobals = Assoc String Addr
 
@@ -93,6 +98,7 @@ step state@(stack, dump, heap, globals, stats) =
     dispatch (NNum n)                  = numStep state n
     dispatch (NAp a1 a2)               = apStep state a1 a2
     dispatch (NSupercomb sc args body) = scStep state sc args body
+    dispatch (NInd addr)               = indStep state addr
 
 numStep :: TiState -> Integer -> TiState
 numStep state n = error "Number applied as a function!"
@@ -103,19 +109,28 @@ apStep (stack, dump, heap, globals, stats) a1 a2 =
 
 scStep :: TiState -> String -> [String] -> CoreExpr -> TiState
 scStep (stack, dump, heap, globals, stats) scName argNames body
-  | stackSize < argLength =
+  | stackSize < argLength + 1 =
     error $
     "Missing  arguments for supercombinator '" ++
     scName ++
     "'. Expected " ++ show argLength ++ ", got " ++ show stackSize ++ "."
   | otherwise = (newStack, dump, newHeap, globals, stats)
+    -- !heapPrint = trace ("\nheap: " ++ show heap ++ "\n\n") heap
+    -- !heapPrint1 = trace ("\nheap': " ++ show heap' ++ "\n\n") heap
+    -- !heapPrint2 = trace ("\nnewHeap: " ++ show newHeap ++ "\n\n") heap
   where
-    newStack = resultAddr : drop (length argNames + 1) stack
-    (newHeap, resultAddr) = instantiate body heap env
+    newHeap = hUpdate heap' rootAddr (NInd resultAddr)
+    newStack = resultAddr : stack'
+    rootAddr:stack' = drop argLength stack
+    (heap', resultAddr) = instantiate body heap env
     env = argBindings ++ globals
     argBindings = zip argNames (getArgs heap stack)
-    argLength = 1 + length argNames
+    argLength = length argNames
     stackSize = length stack
+
+indStep :: TiState -> Addr -> TiState
+indStep (_:stack, dump, heap, globals, stats) addr =
+  (addr : stack, dump, heap, globals, stats)
 
 getArgs :: TiHeap -> TiStack -> [Addr]
 getArgs heap (sc:stack) = map getArg stack
@@ -199,8 +214,9 @@ showStkNode heap node = showNode node
 
 showNode :: ISeq iseq => Node -> iseq
 showNode (NAp a1 a2) = iConcat ["NAp ", showAddr a1, " ", showAddr a2]
-showNode (NSupercomb name args body) = iStr ("NSupercomb " ++ name)
+showNode (NSupercomb name args body) = "NSupercomb " <> iStr name
 showNode (NNum n) = "NNum " <> iNum n
+showNode (NInd addr) = "NInd " <> showAddr addr
 
 showAddr :: ISeq iseq => Addr -> iseq
 showAddr addr = iStr $ show addr

@@ -26,8 +26,14 @@ showAddr a = "#" ++ show a
 newtype HeapRep a =
   Heap (Integer, [Addr], [(Addr, a)])
 
+instance Show a => Show (HeapRep a) where
+  show (Heap (size, frees, cts)) =
+    "Heap of size " ++
+    show size ++
+    " next free " ++ show (head frees) ++ " cts: \n" ++ unlines (map show cts)
+
 remove :: [(Integer, a)] -> Integer -> [(Integer, a)]
-remove list a = filter ((== a) . fst) list
+remove list a = filter ((/= a) . fst) list
 
 instance Heap HeapRep where
   hInitial = Heap (0, [1 ..], [])
@@ -36,9 +42,9 @@ instance Heap HeapRep where
   hUpdate (Heap (size, free, cts)) a n =
     Heap (size, free, (a, n) : remove cts a)
   hFree (Heap (size, free, cts)) a = Heap (size - 1, a : free, remove cts a)
-  hLookup (Heap (size, free, cts)) a =
-    fromMaybe (error $ "Can't find node " ++ show a ++ " in heap") $
-    lookup a cts
+  hLookup heap@(Heap (size, free, cts)) a = fromMaybe err $ lookup a cts
+    where
+      err = error $ "Can't find node " ++ show a ++ " in heap. "
   hAddresses (Heap (size, free, cts)) = [addr | (addr, node) <- cts]
   hSize (Heap (size, free, cts)) = size
 
